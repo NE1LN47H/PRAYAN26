@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import fireDragon from "@/assets/fire-dragon.jpeg";
 import iceDragon from "@/assets/ice-dragon.png";
 import prayanLogo from "@/assets/prayan-logo.png";
+
+// Register ScrollTrigger
+gsap.registerPlugin(ScrollTrigger);
 
 const events = [
   { name: "EVENT", desc: "48-hour coding marathon", icon: "⚔️" },
@@ -26,62 +31,108 @@ const realmBody =
   "In the grand tradition of the ancient houses, PRAYAN\u201926 summons the brightest minds to compete, create, and conquer. From the fiery forges of innovation to the icy peaks of intellect \u2014 choose your allegiance and claim your throne.";
 
 const MainSite = () => {
-  const [scrollY, setScrollY] = useState(0);
-  const [isIceVisible, setIsIceVisible] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const fireBgRef = useRef<HTMLDivElement>(null);
+  const iceBgRef = useRef<HTMLDivElement>(null);
   const iceRevealRef = useRef<HTMLElement>(null);
+  const [isIceVisible, setIsIceVisible] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+    const ctx = gsap.context(() => {
+      // Hero Fire Background Parallax & Fade
+      gsap.to(fireBgRef.current, {
+        scrollTrigger: {
+          trigger: "section:first-of-type",
+          start: "top top",
+          end: "bottom top",
+          scrub: true,
+        },
+        opacity: 0,
+        scale: 1.1,
+        ease: "none",
+      });
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setIsIceVisible(true); },
-      { threshold: 0.25 }
-    );
-    if (iceRevealRef.current) observer.observe(iceRevealRef.current);
-    return () => observer.disconnect();
-  }, []);
+      // Ice Background Fade In and Parallax
+      gsap.fromTo(
+        iceBgRef.current,
+        { opacity: 0, scale: 1.05 },
+        {
+          scrollTrigger: {
+            trigger: "section:first-of-type",
+            start: "40% top",
+            end: "bottom top",
+            scrub: true,
+          },
+          opacity: 1,
+          scale: 1,
+          ease: "none",
+        }
+      );
 
-  // Scroll-driven parallax values
-  const vh = typeof window !== "undefined" ? window.innerHeight : 800;
-  // Fire fades out as we scroll past first screen
-  const fireOpacity = Math.max(0, 1 - scrollY / (vh * 0.8));
-  // Ice fades in starting at 60% of first screen
-  const iceOpacity = Math.min(1, Math.max(0, (scrollY - vh * 0.4) / (vh * 0.6)));
-  // Subtle scale for depth
-  const fireScale = 1 + (scrollY / (vh * 10));
-  const iceScale = 1 + ((1 - iceOpacity) * 0.05);
+      // Section triggers for "The Realm Awaits"
+      ScrollTrigger.create({
+        trigger: iceRevealRef.current,
+        start: "top 80%",
+        onEnter: () => setIsIceVisible(true),
+        // No reverse here to keep letters frozen as per original design, 
+        // but could add onLeaveBack if needed
+      });
+
+      // Character/Word animations for "The Realm Awaits" can be done here too,
+      // but keeping existing CSS animations for now to maintain the look.
+
+      // Event cards entrance
+      gsap.from(".herald-card", {
+        scrollTrigger: {
+          trigger: "#events",
+          start: "top 80%",
+        },
+        y: 60,
+        opacity: 0,
+        duration: 1,
+        stagger: 0.2,
+        ease: "power3.out",
+      });
+    }, containerRef);
+
+    return () => ctx.revert();
+  }, []);
 
   return (
     <div ref={containerRef} className="relative">
 
       {/* ── FIXED PARALLAX BACKGROUNDS ── */}
       <div
+        ref={fireBgRef}
         className="fixed inset-0 z-0 bg-cover bg-center will-change-transform"
         style={{
           backgroundImage: `url(${fireDragon})`,
-          opacity: fireOpacity,
-          transform: `scale(${fireScale})`,
+          opacity: 0.6, // Dimmed from 1
+          backfaceVisibility: "hidden", // Sharpness during scaling
+          imageRendering: "crisp-edges", // Pixel-perfect attempt
         }}
       />
       <div
+        ref={iceBgRef}
         className="fixed inset-0 z-0 bg-cover bg-center will-change-transform"
         style={{
           backgroundImage: `url(${iceDragon})`,
-          opacity: iceOpacity,
-          transform: `scale(${iceScale})`,
+          opacity: 0,
+          backfaceVisibility: "hidden", // Sharpness during scaling
+          imageRendering: "crisp-edges", // Pixel-perfect attempt
         }}
       />
+      {/* Permanent dark overlay for dimming/readibility */}
+      <div
+        className="fixed inset-0 z-[1] pointer-events-none bg-black/40"
+      />
+
       {/* Permanent subtle dark vignette — edges only, center stays clear */}
       <div
-        className="fixed inset-0 z-0 pointer-events-none"
+        className="fixed inset-0 z-[2] pointer-events-none"
         style={{
           background:
-            "radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, hsla(220,30%,4%,0.55) 100%)",
+            "radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, hsla(220,30%,4%,0.7) 100%)",
         }}
       />
 
